@@ -7,6 +7,7 @@ import Home from './pages/Home'
 import ProjectDetail from './pages/ProjectDetail'
 import CreateProject from './pages/CreateProject'
 import MyProjects from './pages/MyProjects'
+import ProjectHistory from './pages/ProjectHistory'
 import AdminPanel from './components/AdminPanel'
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
               <Route path="/project/:id" element={<ProjectDetail />} />
               <Route path="/create" element={<CreateProject />} />
               <Route path="/my-projects" element={<MyProjects />} />
+              <Route path="/history" element={<ProjectHistory />} />
             </Routes>
           </main>
           <Footer />
