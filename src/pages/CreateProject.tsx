@@ -68,7 +68,8 @@ const CreateProject: React.FC = () => {
       const total = parseFloat(formData.totalAmount)
       const price = parseFloat(formData.ticketPrice)
       
-      if (total % price !== 0) {
+      // 允许小数情况下的整除（如 1/0.01=100），用浮点数除法判断是否为整数
+      if (!Number.isInteger(total / price)) {
         newErrors.totalAmount = '目标金额必须是抽奖券价格的整数倍'
       }
     }

@@ -4,6 +4,9 @@ import { useContract, Project, Participant } from '../hooks/useContract'
 import { useWeb3 } from '../contexts/Web3Context'
 import QuickSubscribe from '../components/QuickSubscribe'
 import NetworkStatus from '../components/NetworkStatus'
+import LotteryDrawer from '../components/LotteryDrawer'
+import LotteryStatus from '../components/LotteryStatus'
+import ProjectStatus from '../components/ProjectStatus'
 import { formatMON, formatTimeRemaining, calculateProgress } from '../utils/formatters'
 import toast from 'react-hot-toast'
 
@@ -179,6 +182,15 @@ const ProjectDetail: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <NetworkStatus />
+      
+      {/* Lottery Status for all users */}
+      <LotteryStatus project={project} />
+      
+      {/* Detailed Project Status */}
+      <div className="mb-6">
+        <ProjectStatus project={project} onProjectUpdate={() => loadProject(project.id)} />
+      </div>
+      
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Project Image and Details */}
         <div>
@@ -231,6 +243,11 @@ const ProjectDetail: React.FC = () => {
           {/* Quick Subscribe Component */}
           <div className="mb-6">
             <QuickSubscribe project={project} onSuccess={() => loadProject(project.id)} />
+          </div>
+
+          {/* Lottery Drawer Component */}
+          <div className="mb-6">
+            <LotteryDrawer project={project} onSuccess={() => loadProject(project.id)} />
           </div>
           
           <div className="card mb-6">
@@ -298,7 +315,7 @@ const ProjectDetail: React.FC = () => {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="flex justify-between text-sm">
                     <span>总费用:</span>
-                    <span className="font-medium">{formatEther(totalCost)} ETH</span>
+                    <span className="font-medium">{formatMON(totalCost)} MON</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>中奖概率:</span>

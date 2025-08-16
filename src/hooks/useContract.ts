@@ -35,31 +35,52 @@ export const useContract = () => {
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    console.log('Contract Address:', CONTRACT_ADDRESS)
-    console.log('Provider:', provider)
-    console.log('Is Connected:', isConnected)
+    console.log('🔍 Contract initialization check:')
+    console.log('  - Contract Address:', CONTRACT_ADDRESS)
+    console.log('  - Provider available:', !!provider)
+    console.log('  - Is Connected:', isConnected)
+    console.log('  - Provider type:', provider?.constructor?.name)
     
-    if (provider && isConnected && CONTRACT_ADDRESS && CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000') {
-      try {
-        const contractInstance = new ethers.Contract(
-          CONTRACT_ADDRESS,
-          YuanGouLotteryABI.abi,
-          provider
-        )
-        setContract(contractInstance)
-        console.log('✅ Contract instance created successfully')
-      } catch (error) {
-        console.error('❌ Failed to create contract instance:', error)
+    // 添加延迟以确保provider完全初始化
+    const initializeContract = async () => {
+      if (provider && isConnected && CONTRACT_ADDRESS && CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000') {
+        try {
+          console.log('🚀 Creating contract instance...')
+          const contractInstance = new ethers.Contract(
+            CONTRACT_ADDRESS,
+            YuanGouLotteryABI.abi,
+            provider
+          )
+          
+          // 测试合约连接
+          try {
+            const network = await provider.getNetwork()
+            console.log('📡 Network info:', network.chainId, network.name)
+            
+            setContract(contractInstance)
+            console.log('✅ Contract instance created successfully')
+          } catch (networkError) {
+            console.error('❌ Network connection failed:', networkError)
+            setContract(null)
+          }
+        } catch (error) {
+          console.error('❌ Failed to create contract instance:', error)
+          setContract(null)
+        }
+      } else {
+        console.warn('⚠️ Contract setup conditions not met:', { 
+          hasProvider: !!provider, 
+          isConnected, 
+          hasAddress: !!CONTRACT_ADDRESS,
+          addressValue: CONTRACT_ADDRESS
+        })
         setContract(null)
       }
-    } else {
-      console.warn('⚠️ Contract setup conditions not met:', { 
-        hasProvider: !!provider, 
-        isConnected, 
-        hasAddress: !!CONTRACT_ADDRESS 
-      })
-      setContract(null)
     }
+
+    // 添加短暂延迟以确保所有状态已更新
+    const timer = setTimeout(initializeContract, 100)
+    return () => clearTimeout(timer)
   }, [provider, isConnected, CONTRACT_ADDRESS])
 
   // 获取所有活跃项目
@@ -190,7 +211,14 @@ export const useContract = () => {
 
   // 获取用户参与情况
   const getUserParticipation = async (projectId: number, userAddress: string): Promise<Participant> => {
-    if (!contract) throw new Error('合约未连接')
+    if (!contract || !isConnected) {
+      console.warn('Contract or wallet not ready for getUserParticipation:', { 
+        hasContract: !!contract, 
+        isConnected,
+        contractAddress: CONTRACT_ADDRESS
+      })
+      throw new Error('请先连接钱包并确保网络正确')
+    }
     
     try {
       const participation = await contract.userParticipation(projectId, userAddress)

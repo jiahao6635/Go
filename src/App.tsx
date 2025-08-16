@@ -7,6 +7,7 @@ import Home from './pages/Home'
 import ProjectDetail from './pages/ProjectDetail'
 import CreateProject from './pages/CreateProject'
 import MyProjects from './pages/MyProjects'
+import AdminPanel from './components/AdminPanel'
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
             </Routes>
           </main>
           <Footer />
+          <AdminPanel />
         </div>
       </Router>
     </Web3Provider>

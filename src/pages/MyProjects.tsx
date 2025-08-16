@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useContract, Project } from '../hooks/useContract'
 import { useWeb3 } from '../contexts/Web3Context'
 import { formatMON, formatTimeRemaining, calculateProgress } from '../utils/formatters'
+import ContractDebugInfo from '../components/ContractDebugInfo'
 import toast from 'react-hot-toast'
 
 const MyProjects: React.FC = () => {
@@ -14,7 +15,11 @@ const MyProjects: React.FC = () => {
 
   useEffect(() => {
     if (isConnected && account) {
-      loadMyProjects()
+      // 添加延迟确保合约已完全初始化
+      const timer = setTimeout(() => {
+        loadMyProjects()
+      }, 500)
+      return () => clearTimeout(timer)
     }
   }, [isConnected, account])
 
@@ -50,10 +55,6 @@ const MyProjects: React.FC = () => {
     }
   }
 
-  const formatEther = (value: bigint) => {
-    return parseFloat(ethers.formatEther(value)).toFixed(4)
-  }
-
   const getProjectStatus = (project: Project) => {
     const now = Math.floor(Date.now() / 1000)
     if (project.isCompleted) {
@@ -63,25 +64,6 @@ const MyProjects: React.FC = () => {
       return { text: '已过期', color: 'danger' }
     }
     return { text: '进行中', color: 'primary' }
-  }
-
-  const calculateProgress = (project: Project) => {
-    return Number(project.currentAmount * 100n / project.totalAmount)
-  }
-
-  const formatTimeRemaining = (deadline: number) => {
-    const now = Math.floor(Date.now() / 1000)
-    const remaining = deadline - now
-    
-    if (remaining <= 0) return '已结束'
-    
-    const days = Math.floor(remaining / 86400)
-    const hours = Math.floor((remaining % 86400) / 3600)
-    const minutes = Math.floor((remaining % 3600) / 60)
-    
-    if (days > 0) return `${days}天 ${hours}小时`
-    if (hours > 0) return `${hours}小时 ${minutes}分钟`
-    return `${minutes}分钟`
   }
 
   if (!isConnected) {
@@ -105,6 +87,8 @@ const MyProjects: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <ContractDebugInfo />
+      
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">我的项目</h1>
@@ -252,35 +236,63 @@ const ProjectParticipationInfo: React.FC<{ projectId: number; account: string }>
   projectId, 
   account 
 }) => {
-  const { getUserParticipation, getProject } = useContract()
+  const { getUserParticipation, getProject, contract } = useContract()
+  const { isConnected } = useWeb3()
   const [participation, setParticipation] = useState<any>(null)
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const loadData = async () => {
+      // 等待合约完全初始化
+      if (!isConnected || !contract) {
+        setLoading(false)
+        setError('合约未连接')
+        return
+      }
+
       try {
+        setError(null)
         const [participationData, projectData] = await Promise.all([
           getUserParticipation(projectId, account),
           getProject(projectId)
         ])
         setParticipation(participationData)
         setProject(projectData)
-      } catch (error) {
+      } catch (error: any) {
         console.error('加载参与信息失败:', error)
+        setError(error.message || '加载失败')
       } finally {
         setLoading(false)
       }
     }
-    loadData()
-  }, [projectId, account])
+
+    // 添加延迟以确保合约已完全初始化
+    const timer = setTimeout(loadData, 1000)
+    return () => clearTimeout(timer)
+  }, [projectId, account, isConnected, contract])
 
   if (loading) {
-    return <div className="animate-pulse">加载中...</div>
+    return (
+      <div className="flex items-center text-sm text-gray-600">
+        <div className="w-4 h-4 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mr-2"></div>
+        加载中...
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-red-600 text-sm">
+        <div>⚠️ {error}</div>
+        <div className="text-xs text-gray-500 mt-1">请刷新页面重试</div>
+      </div>
+    )
   }
 
   if (!participation || !project) {
-    return <div className="text-red-600 text-sm">加载失败</div>
+    return <div className="text-gray-600 text-sm">未参与此项目</div>
   }
 
   const winningChance = project.soldTickets > 0 
@@ -292,7 +304,7 @@ const ProjectParticipationInfo: React.FC<{ projectId: number; account: string }>
       <div className="text-blue-900 font-medium mb-1">我的参与</div>
       <div className="text-blue-700 space-y-1">
         <div>券数: {participation.ticketCount} 张</div>
-        <div>投入: {formatEther(participation.amount)} ETH</div>
+        <div>投入: {formatMON(participation.amount)} MON</div>
         <div>中奖率: {winningChance}%</div>
       </div>
     </div>

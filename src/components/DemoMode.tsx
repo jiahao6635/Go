@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { demoProjects, generateProjectStatus } from '../data/demoProjects'
 import ProjectCard from './ProjectCard'
+import { simulateDrawLottery, generateDemoParticipants } from '../utils/demoLottery'
+import { formatMON } from '../utils/formatters'
 import toast from 'react-hot-toast'
 
 interface DemoModeProps {
@@ -123,10 +125,35 @@ const DemoProjectCard: React.FC<{ project: any }> = ({ project }) => {
     // 模拟网络延迟
     await new Promise(resolve => setTimeout(resolve, 1500))
     
-    setLocalSoldTickets(prev => Math.min(prev + count, project.maxTickets))
-    toast.success(`🎉 演示购买成功！购买了 ${count} 张抽奖券`)
+    const newSoldTickets = Math.min(localSoldTickets + count, project.maxTickets)
+    setLocalSoldTickets(newSoldTickets)
+    
+    // 如果售罄，自动触发抽奖演示
+    if (newSoldTickets >= project.maxTickets) {
+      setTimeout(() => {
+        handleDemoLottery()
+      }, 2000)
+      toast.success(`🎉 恭喜！项目已售罄，即将开始抽奖...`)
+    } else {
+      toast.success(`🎉 演示购买成功！购买了 ${count} 张抽奖券`)
+    }
     
     setBuying(false)
+  }
+
+  const handleDemoLottery = () => {
+    // 生成演示参与者数据
+    const participants = generateDemoParticipants(localSoldTickets, project.maxTickets)
+    
+    // 模拟抽奖
+    const result = simulateDrawLottery(participants, project.maxTickets)
+    
+    if (result) {
+      toast.success(
+        `🏆 抽奖完成！获奖者：${result.winner.slice(0, 8)}...${result.winner.slice(-6)}`,
+        { duration: 5000 }
+      )
+    }
   }
 
   return (
